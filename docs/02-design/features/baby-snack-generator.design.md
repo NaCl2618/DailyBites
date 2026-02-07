@@ -2,9 +2,14 @@
 
 **Feature ID**: baby-snack-generator
 **Created**: 2026-02-06
-**Status**: Design
-**Version**: 1.0
+**Updated**: 2026-02-07
+**Status**: Design (Updated)
+**Version**: 1.1
 **Plan Document**: [baby-snack-generator.plan.md](../../01-plan/features/baby-snack-generator.plan.md)
+
+**Change Log**:
+- v1.1 (2026-02-07): Updated AI provider from OpenAI to Google Gemini AI, Unsplash image selection
+- v1.0 (2026-02-06): Initial design
 
 ---
 
@@ -41,17 +46,17 @@
 │  ┌─────────────────────────────────────────────────┐        │
 │  │            API Layer (lib/)                     │        │
 │  │  - bkend.ts (BaaS client)                      │        │
-│  │  - openai.ts (AI client)                       │        │
+│  │  - gemini.ts (AI client)                       │        │
 │  │  - utils.ts (Helpers)                          │        │
 │  └─────────────────────────────────────────────────┘        │
 └───────────────────┬─────────────────┬───────────────────────┘
                     │                 │
-         ┌──────────▼─────┐  ┌────────▼─────────┐
-         │  bkend.ai BaaS │  │  OpenAI API      │
-         │  - Database    │  │  - GPT-4 Turbo   │
-         │  - Auth        │  │  - DALL-E 3      │
-         │  - Storage     │  │                  │
-         └────────────────┘  └──────────────────┘
+         ┌──────────▼─────┐  ┌────────▼──────────┐
+         │  bkend.ai BaaS │  │  Google Gemini AI │
+         │  - Database    │  │  - Gemini 2.5     │
+         │  - Auth        │  │    Flash          │
+         │  - Storage     │  │                   │
+         └────────────────┘  └───────────────────┘
 ```
 
 ### 1.2 Data Flow
@@ -68,11 +73,10 @@ generateRecipe() API 호출
 ┌─────────────────────────────┐
 │ Server Action / API Route   │
 │ 1. 재료 검증                │
-│ 2. OpenAI GPT-4 호출        │
+│ 2. Gemini AI 호출           │
 │ 3. 레시피 JSON 파싱         │
-│ 4. DALL-E 3 이미지 생성     │
-│ 5. 이미지 업로드 (bkend)    │
-│ 6. 레시피 객체 반환         │
+│ 4. Unsplash 이미지 선택     │
+│ 5. 레시피 객체 반환         │
 └─────────────────────────────┘
     ↓
 RecipeResult 컴포넌트에 표시
@@ -106,8 +110,8 @@ bkend.ai에 레시피 저장
 | Service | Purpose | Pricing Model |
 |---------|---------|---------------|
 | bkend.ai | Database, Auth, Storage | Free tier: 10GB storage |
-| OpenAI GPT-4 Turbo | Recipe generation | $0.01 / 1K tokens (input) |
-| OpenAI DALL-E 3 | Image generation | $0.04 / image (1024x1024) |
+| Google Gemini 2.5 Flash | Recipe generation | Free tier: 1500 requests/day, $0.075 / 1M input tokens (paid) |
+| Unsplash | Image selection | Free (curated images) |
 
 ### 2.3 Development & Build Tools
 
@@ -185,7 +189,7 @@ components/
 lib/
 ├── api/
 │   ├── recipes.ts                 # Recipe API functions
-│   ├── openai.ts                  # OpenAI integration
+│   ├── gemini.ts                  # Google Gemini AI integration
 │   └── ingredients.ts             # Ingredient API
 │
 ├── hooks/
@@ -524,25 +528,41 @@ export const SaveRecipeSchema = z.object({
 }
 ```
 
-### 5.2 OpenAI Integration
+### 5.2 Google Gemini AI Integration
 
 #### 5.2.1 Recipe Generation Prompt
 
 ```typescript
-// lib/constants/prompts.ts
+// lib/api/gemini.ts (prompts inline)
 
-export const RECIPE_GENERATION_PROMPT = (
+function createRecipePrompt(
   ingredients: string[],
-  ageRange?: string,
-  cookingTime?: string
-) => `
-당신은 영유아 영양 전문가입니다. 다음 재료를 사용하여 아기 간식 레시피를 생성해주세요.
+  options: RecipeGenerationOptions = {}
+): string {
+  const { ageRange, cookingTime } = options;
 
-재료: ${ingredients.join(', ')}
-${ageRange ? `적합 월령: ${ageRange}개월` : ''}
-${cookingTime === 'quick' ? '조리 시간: 15분 이내 (빠른 레시피)' : '조리 시간: 30분 이내'}
+  let prompt = `당신은 영유아 영양 전문가입니다. 다음 재료를 사용하여 아기 간식 레시피를 생성해주세요.
 
-다음 JSON 형식으로 레시피를 생성해주세요:
+재료: ${ingredients.join(', ')}`;
+
+  if (ageRange) {
+    const ageLabels = {
+      '6-12': '6-12개월',
+      '12-24': '12-24개월',
+      '24+': '24개월 이상',
+    };
+    prompt += `\n적합 월령: ${ageLabels[ageRange]}`;
+  }
+
+  if (cookingTime === 'quick') {
+    prompt += `\n조리 시간: 15분 이내 (빠른 레시피)`;
+  } else {
+    prompt += `\n조리 시간: 30분 이내`;
+  }
+
+  prompt += `
+
+다음 JSON 형식으로 레시피를 생성해주세요. 반드시 유효한 JSON만 반환하세요:
 
 {
   "title": "레시피 제목 (예: 바나나 아보카도 퓨레)",
@@ -556,11 +576,11 @@ ${cookingTime === 'quick' ? '조리 시간: 15분 이내 (빠른 레시피)' : '
   "steps": [
     "1단계 설명",
     "2단계 설명",
-    "..."
+    "3단계 설명"
   ],
   "cookingTime": 조리시간(분 단위, 숫자),
-  "difficulty": "easy" | "medium" | "hard",
-  "ageRange": "적합 월령 (예: 6-12개월, 12-24개월)",
+  "difficulty": "easy" 또는 "medium" 또는 "hard",
+  "ageRange": "적합 월령 (예: 6-12개월, 12-24개월, 24개월+)",
   "allergyWarnings": ["알레르기 유발 가능 재료"],
   "nutritionInfo": {
     "calories": 숫자,
@@ -574,89 +594,124 @@ ${cookingTime === 'quick' ? '조리 시간: 15분 이내 (빠른 레시피)' : '
 - 아기에게 안전한 재료만 사용
 - 소금, 설탕 최소화
 - 알레르기 유발 가능 재료는 반드시 allergyWarnings에 명시
-- 조리 단계는 명확하고 구체적으로
+- 조리 단계는 명확하고 구체적으로 (3-7단계)
 - 입력된 재료는 가능한 모두 활용 (전부 사용할 필요는 없음)
-`;
+- isInputIngredient는 입력된 재료인지 여부를 표시
+- 반드시 유효한 JSON 형식으로만 응답`;
 
-export const IMAGE_GENERATION_PROMPT = (recipeTitle: string, mainIngredients: string[]) =>
-  `A beautiful, appetizing photo of ${recipeTitle}, baby food made with ${mainIngredients.join(', ')}, served in a cute baby bowl, soft lighting, warm color tone, food photography style, high quality, no text`;
+  return prompt;
+}
 ```
 
-#### 5.2.2 OpenAI API Client
+#### 5.2.2 Google Gemini API Client
 
 ```typescript
-// lib/api/openai.ts
+// lib/api/gemini.ts
 
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export async function generateRecipe(
+export async function generateRecipeWithGemini(
   ingredients: string[],
   options: RecipeGenerationOptions = {}
-): Promise<GeneratedRecipe> {
+): Promise<Omit<GeneratedRecipe, 'imageUrl' | 'imagePrompt'>> {
   try {
-    // 1. Generate recipe with GPT-4 Turbo
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: '당신은 영유아 영양 전문가입니다.',
-        },
-        {
-          role: 'user',
-          content: RECIPE_GENERATION_PROMPT(
-            ingredients,
-            options.ageRange,
-            options.cookingTime
-          ),
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
+    // Gemini 2.5 Flash 모델 사용
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const recipeData = JSON.parse(completion.choices[0].message.content || '{}');
+    const prompt = createRecipePrompt(ingredients, options);
 
-    // 2. Generate image with DALL-E 3
-    const mainIngredients = ingredients.slice(0, 3); // 주요 재료 3개
-    const imagePrompt = IMAGE_GENERATION_PROMPT(recipeData.title, mainIngredients);
+    // 레시피 생성
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    const imageResponse = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: imagePrompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'standard',
-    });
+    // JSON 파싱 (Gemini가 ```json ... ``` 형식으로 반환할 수 있으므로 처리)
+    let jsonText = text.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/```\n?/g, '');
+    }
 
-    const imageUrl = imageResponse.data[0].url!;
+    const recipeData = JSON.parse(jsonText);
 
-    // 3. Upload image to bkend.ai storage
-    const uploadedImageUrl = await uploadImageToBkend(imageUrl);
-
+    // 생성된 레시피 반환 (이미지 제외)
     return {
-      ...recipeData,
-      imageUrl: uploadedImageUrl,
-      imagePrompt,
+      title: recipeData.title,
+      ingredients: recipeData.ingredients,
+      steps: recipeData.steps,
+      cookingTime: recipeData.cookingTime,
+      difficulty: recipeData.difficulty,
+      ageRange: recipeData.ageRange,
+      allergyWarnings: recipeData.allergyWarnings || [],
+      nutritionInfo: recipeData.nutritionInfo,
       createdAt: new Date(),
     };
   } catch (error) {
-    console.error('Recipe generation failed:', error);
+    console.error('Gemini API Error:', error);
     throw new Error('레시피 생성에 실패했습니다. 다시 시도해주세요.');
   }
 }
 
-async function uploadImageToBkend(imageUrl: string): Promise<string> {
-  // Download image from DALL-E URL
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
+/**
+ * Unsplash 이미지 선택 (재료 기반 매핑)
+ */
+export async function generateImageWithGemini(
+  recipeTitle: string,
+  mainIngredients: string[]
+): Promise<string> {
+  try {
+    // 재료 기반 이미지 매핑
+    const ingredientImageMap: Record<string, string> = {
+      // 과일류
+      바나나: 'https://images.unsplash.com/photo-1481070555726-e2fe8357725c?w=1024&h=1024&fit=crop&q=80',
+      아보카도: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=1024&h=1024&fit=crop&q=80',
+      사과: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=1024&h=1024&fit=crop&q=80',
+      블루베리: 'https://images.unsplash.com/photo-1587334207976-c9a0c6f1f88e?w=1024&h=1024&fit=crop&q=80',
+      딸기: 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=1024&h=1024&fit=crop&q=80',
 
-  // Upload to bkend.ai storage
-  // TODO: Implement bkend.ai file upload
+      // 채소류
+      당근: 'https://images.unsplash.com/photo-1447175008436-054170c2e979?w=1024&h=1024&fit=crop&q=80',
+      고구마: 'https://images.unsplash.com/photo-1590165482129-1b8b27698780?w=1024&h=1024&fit=crop&q=80',
+      브로콜리: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?w=1024&h=1024&fit=crop&q=80',
+      시금치: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=1024&h=1024&fit=crop&q=80',
+
+      // 곡물류
+      쌀: 'https://images.unsplash.com/photo-1505252585461-04db1eb84625?w=1024&h=1024&fit=crop&q=80',
+      오트밀: 'https://images.unsplash.com/photo-1607672632458-9eb56696346b?w=1024&h=1024&fit=crop&q=80',
+
+      // 유제품
+      요거트: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=1024&h=1024&fit=crop&q=80',
+      치즈: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=1024&h=1024&fit=crop&q=80',
+    };
+
+    // 첫 번째 재료로 이미지 선택
+    for (const ingredient of mainIngredients) {
+      if (ingredientImageMap[ingredient]) {
+        return ingredientImageMap[ingredient];
+      }
+    }
+
+    // 매칭되는 재료가 없으면 랜덤 아기 음식 이미지
+    return getFallbackImage();
+  } catch (error) {
+    console.error('[Image] Error selecting image:', error);
+    return getFallbackImage();
+  }
+}
+
+function getFallbackImage(): string {
+  const babyFoodImages = [
+    'https://images.unsplash.com/photo-1481070555726-e2fe8357725c?w=1024&h=1024&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=1024&h=1024&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1587334207976-c9a0c6f1f88e?w=1024&h=1024&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1447175008436-054170c2e979?w=1024&h=1024&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1590165482129-1b8b27698780?w=1024&h=1024&fit=crop&q=80',
+  ];
+  return babyFoodImages[Math.floor(Math.random() * babyFoodImages.length)];
+}
   // For now, return the original URL
   return imageUrl;
 }
@@ -868,34 +923,59 @@ Recipe Result
 
 ### 8.1 API Usage & Cost Estimation
 
-#### 8.1.1 GPT-4 Turbo Usage
+#### 8.1.1 Google Gemini 2.5 Flash Usage
+
+**Free Tier Limits**:
+- 1500 requests per day (free)
+- Rate limit: 15 RPM (requests per minute)
 
 **Input Tokens** (per request):
-- System prompt: ~50 tokens
-- User prompt template: ~150 tokens
+- System prompt + user prompt template: ~200 tokens
 - Ingredients (3 items avg): ~20 tokens
 - **Total Input**: ~220 tokens
 
 **Output Tokens** (per response):
 - Recipe JSON: ~400 tokens
 
-**Cost per Generation**:
-- Input: 220 tokens × $0.01 / 1K = $0.0022
-- Output: 400 tokens × $0.03 / 1K = $0.012
-- **Total**: ~$0.014 per recipe
+**Cost per Generation** (Free tier):
+- Free tier: **$0** (up to 1500 requests/day)
 
-#### 8.1.2 DALL-E 3 Usage
+**Cost per Generation** (Paid tier, if exceeded):
+- Input: 220 tokens × $0.075 / 1M = $0.0000165
+- Output: 400 tokens × $0.30 / 1M = $0.00012
+- **Total**: ~$0.00014 per recipe
+
+#### 8.1.2 Unsplash Image Selection
 
 **Cost per Image**:
-- 1024x1024, standard quality: $0.04
-- **Total**: $0.04 per image
+- Curated Unsplash images: **$0** (free)
+- No API key required
+- Static URL mapping based on ingredients
 
 #### 8.1.3 Combined Cost
 
-**Per Recipe Generation**: $0.014 (GPT-4) + $0.04 (DALL-E) = **$0.054**
+**Per Recipe Generation** (Free tier):
+- Gemini API: **$0** (free tier)
+- Unsplash images: **$0** (free)
+- **Total**: **$0** (up to 1500/day)
 
-**Monthly Cost Estimate** (1000 generations):
-- 1000 generations × $0.054 = **$54/month**
+**Per Recipe Generation** (Paid tier, if exceeded):
+- Gemini API: **$0.00014**
+- Unsplash images: **$0**
+- **Total**: **~$0.00014** per recipe
+
+**Monthly Cost Estimate** (1000 generations within free tier):
+- 1000 generations × $0 = **$0/month**
+
+**Monthly Cost Estimate** (10,000 generations, exceeding free tier):
+- First 1500/day free (45,000/month) → $0
+- Additional usage minimal cost
+- **Total**: **< $5/month** (estimated)
+
+**Cost Savings vs OpenAI**:
+- OpenAI: $54/month (1000 generations)
+- Gemini: $0/month (1000 generations)
+- **Savings**: 100%
 
 ### 8.2 Rate Limiting Strategy
 
@@ -1279,12 +1359,12 @@ const RecipeCard = ({ recipe }: { recipe: SavedRecipe }) => {
 
 ```typescript
 // .env.local
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=AIza...
 NEXT_PUBLIC_BKEND_API_KEY=...
 NEXT_PUBLIC_BKEND_PROJECT_ID=...
 
-// IMPORTANT: Never expose OPENAI_API_KEY to client
-// All OpenAI calls must be server-side
+// IMPORTANT: Never expose GEMINI_API_KEY to client
+// All Gemini API calls must be server-side
 ```
 
 ### 11.2 Input Validation
@@ -1611,8 +1691,8 @@ npm install -D @types/node @types/react @types/react-dom
 ```env
 # .env.local
 
-# OpenAI
-OPENAI_API_KEY=sk-...
+# Google Gemini AI
+GEMINI_API_KEY=AIza...
 
 # bkend.ai
 NEXT_PUBLIC_BKEND_API_KEY=your_api_key

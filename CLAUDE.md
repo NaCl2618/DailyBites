@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**DailyBites** is a fullstack web application built with Next.js and bkend.ai BaaS platform.
+**DailyBites** is an AI-powered baby snack recipe generator built with Next.js and Google Gemini AI.
 
-- **Level**: Dynamic (Intermediate)
-- **Stack**: Next.js 15+, TypeScript, Tailwind CSS, bkend.ai BaaS
-- **Purpose**: Fullstack SaaS/MVP development with authentication and database features
+- **Purpose**: Generate safe and nutritious baby snack recipes based on available ingredients
+- **Stack**: Next.js 15, TypeScript, Tailwind CSS, Google Gemini AI API
+- **Key Features**: AI recipe generation, image selection, allergen warnings, nutrition information
 
 ## Development Commands
 
@@ -32,29 +32,37 @@ npm run lint           # Run ESLint
 ```
 dailybites/
 ├── app/                    # Next.js App Router
-│   ├── (auth)/            # Auth-related routes (login, register)
-│   ├── (main)/            # Protected routes (dashboard, settings)
+│   ├── page.tsx           # Landing page
+│   ├── generate/          # Recipe generation page
+│   │   └── page.tsx       # Main recipe generator UI
+│   ├── api/               # API routes
+│   │   └── recipes/
+│   │       └── generate/  # Recipe generation endpoint
 │   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Home page
 │   └── globals.css        # Global styles
 │
 ├── components/             # React components
-│   ├── ui/                # Basic UI components (Button, Input, etc.)
+│   ├── ui/                # Basic UI components (shadcn/ui)
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   └── ...
 │   └── features/          # Feature-specific components
+│       └── recipe-generator/
+│           ├── IngredientInput.tsx    # Ingredient search/selection
+│           ├── RecipeOptions.tsx      # Age range, cooking time options
+│           ├── GenerationLoading.tsx  # Loading state
+│           └── RecipeResult.tsx       # Display generated recipe
 │
 ├── lib/                    # Utilities and configurations
-│   ├── bkend.ts           # bkend.ai client configuration
-│   └── utils.ts           # Helper functions
-│
-├── hooks/                  # Custom React hooks
-│   ├── useAuth.ts         # Authentication hook
-│   └── useQuery.ts        # Data fetching hooks
-│
-├── stores/                 # State management (Zustand)
-│   └── auth-store.ts      # Auth state
+│   ├── api/
+│   │   └── gemini.ts      # Gemini AI integration
+│   ├── constants/
+│   │   └── ingredients.ts # Predefined ingredient database
+│   └── utils.ts           # Helper functions (cn, etc.)
 │
 ├── types/                  # TypeScript type definitions
-│   └── index.ts
+│   └── index.ts           # Recipe, Ingredient types
 │
 └── docs/                   # PDCA documentation
     ├── 01-plan/           # Planning documents
@@ -66,117 +74,108 @@ dailybites/
 ## Architecture
 
 ### Frontend Architecture
-- **Framework**: Next.js 15+ with App Router
-- **Styling**: Tailwind CSS
-- **State Management**: Zustand for global state
-- **Data Fetching**: TanStack Query (React Query)
+- **Framework**: Next.js 15 with App Router
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **State Management**: React useState (local state only, no global store yet)
 - **Type Safety**: TypeScript strict mode
+- **UI Components**: shadcn/ui (Radix UI primitives)
 
-### Backend (BaaS)
-- **Platform**: bkend.ai
-- **Features**:
-  - Auto-generated REST API
-  - MongoDB database
-  - Built-in JWT authentication
-  - Real-time WebSocket support
-  - File storage
+### Backend (API Routes)
+- **Platform**: Next.js API Routes (serverless functions)
+- **AI Service**: Google Gemini AI (gemini-2.5-flash model)
+- **Image Source**: Unsplash curated images (mapped by ingredients)
+- **Runtime**: Node.js (runtime = 'nodejs', maxDuration = 60s)
 
-### Authentication Flow
-1. User submits login/register form
-2. Client calls `bkend.auth.login()` or `bkend.auth.register()`
-3. Receive JWT token and user data
-4. Store in Zustand + localStorage (persist middleware)
-5. Include token in subsequent API requests
-6. Protected routes check auth state via `useAuth()` hook
+### Recipe Generation Flow
+1. User selects ingredients from predefined database (lib/constants/ingredients.ts)
+2. User optionally selects age range (6-12, 12-24, 24+) and cooking time preference
+3. Frontend sends POST request to `/api/recipes/generate`
+4. Backend calls Gemini AI to generate recipe JSON (title, steps, ingredients, nutrition, allergens)
+5. Backend selects appropriate Unsplash image based on main ingredients
+6. Frontend displays complete recipe with image, ingredients, steps, and warnings
 
-### Data Fetching Pattern
-- Use TanStack Query for all server state
-- Cache invalidation on mutations
-- Optimistic updates for better UX
-- Error boundaries for graceful error handling
+### Gemini AI Integration Pattern
+```typescript
+// lib/api/gemini.ts
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
+export async function generateRecipeWithGemini(
+  ingredients: string[],
+  options: RecipeGenerationOptions = {}
+): Promise<Omit<GeneratedRecipe, 'imageUrl' | 'imagePrompt'>> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const prompt = createRecipePrompt(ingredients, options);
+  const result = await model.generateContent(prompt);
+  // ... parse JSON response
+}
+```
 
 ## Key Patterns
 
-### bkend.ai Client Setup
+### API Route Structure (Recipe Generation)
 ```typescript
-// lib/bkend.ts
-import { createClient } from '@bkend/client';
+// app/api/recipes/generate/route.ts
+export const runtime = 'nodejs';
+export const maxDuration = 60; // Maximum 60 seconds
 
-export const bkend = createClient({
-  apiKey: process.env.NEXT_PUBLIC_BKEND_API_KEY!,
-  projectId: process.env.NEXT_PUBLIC_BKEND_PROJECT_ID!,
-});
+export async function POST(request: NextRequest) {
+  const { ingredients, options } = await request.json();
+
+  // 1. Generate recipe with Gemini
+  const recipeData = await generateRecipeWithGemini(ingredients, options);
+
+  // 2. Select image based on ingredients
+  const imageUrl = await generateImageWithGemini(recipeData.title, mainIngredients);
+
+  // 3. Return complete recipe
+  return NextResponse.json({ success: true, data: recipe });
+}
 ```
 
-### Authentication Hook
+### Ingredient Database Pattern
 ```typescript
-// hooks/useAuth.ts - Zustand store with persistence
-const useAuth = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      login: async (email, password) => {
-        const { user, token } = await bkend.auth.login({ email, password });
-        set({ user });
-      },
-      logout: () => {
-        bkend.auth.logout();
-        set({ user: null });
-      },
-    }),
-    { name: 'auth-storage' }
-  )
-);
-```
-
-### Data Fetching
-```typescript
-// List query
-const { data, isLoading } = useQuery({
-  queryKey: ['items', filters],
-  queryFn: () => bkend.collection('items').find(filters),
-});
-
-// Mutation
-const mutation = useMutation({
-  mutationFn: (newItem) => bkend.collection('items').create(newItem),
-  onSuccess: () => {
-    queryClient.invalidateQueries(['items']);
+// lib/constants/ingredients.ts
+export const INGREDIENTS: Ingredient[] = [
+  {
+    id: 'banana',
+    name: '바나나',
+    category: '과일',
+    allergyRisk: false,
+    minAge: 6,
+    keywords: ['banana', '바나나', 'バナナ']
   },
-});
+  // ... more ingredients
+];
 ```
 
-### Protected Routes
+### Type Definitions
 ```typescript
-// Wrap protected pages with auth check
-'use client';
-export function ProtectedRoute({ children }) {
-  const { user, isLoading } = useAuth();
-  if (isLoading) return <LoadingSpinner />;
-  if (!user) redirect('/login');
-  return <>{children}</>;
+// types/index.ts
+export interface GeneratedRecipe {
+  title: string;
+  ingredients: RecipeIngredient[];  // name, amount, isInputIngredient
+  steps: string[];
+  cookingTime: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  ageRange: string;
+  allergyWarnings: string[];
+  imageUrl: string;
+  nutritionInfo?: NutritionInfo;
 }
 ```
 
 ## Environment Setup
 
-1. Copy `.env.local.example` to `.env.local`
-2. Get bkend.ai credentials:
-   - Sign up at https://bkend.ai
-   - Create a new project
-   - Copy API Key and Project ID
+1. Copy `.env.local copy.example` to `.env.local`
+2. Get Google Gemini API key:
+   - Visit https://aistudio.google.com/apikey
+   - Create API key
 3. Fill in `.env.local`:
    ```
-   NEXT_PUBLIC_BKEND_API_KEY=your_api_key
-   NEXT_PUBLIC_BKEND_PROJECT_ID=your_project_id
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
-
-## MCP Configuration
-
-bkend.ai MCP server is configured in `.mcp.json`:
-- Provides AI access to backend operations
-- Auto-discovers collections and schemas
-- Enables intelligent API suggestions
 
 ## PDCA Workflow
 
@@ -190,37 +189,6 @@ This project follows bkit's PDCA (Plan-Do-Check-Act) methodology:
 
 Documents are stored in `docs/` with proper versioning.
 
-## Common Tasks
-
-### Adding a New Feature
-```bash
-# 1. Plan the feature
-/pdca plan user-profile
-
-# 2. Create design document
-/pdca design user-profile
-
-# 3. Implement (Do phase)
-# ... write code ...
-
-# 4. Analyze implementation
-/pdca analyze user-profile
-
-# 5. Generate completion report
-/pdca report user-profile
-```
-
-### Adding a New Collection (Database Table)
-1. Define schema in design document
-2. Create TypeScript types in `types/`
-3. Access via `bkend.collection('collectionName')`
-4. Collections are auto-created on first use
-
-### Adding Authentication to a Route
-1. Create route in `app/(main)/` directory
-2. Wrap page with `<ProtectedRoute>` component
-3. Access current user via `useAuth()` hook
-
 ## Development Guidelines
 
 ### Code Style
@@ -231,61 +199,57 @@ Documents are stored in `docs/` with proper versioning.
 - Use Tailwind CSS for styling (no CSS modules)
 
 ### File Naming
-- Components: PascalCase (e.g., `UserProfile.tsx`)
-- Hooks: camelCase with `use` prefix (e.g., `useAuth.ts`)
+- Components: PascalCase (e.g., `RecipeResult.tsx`)
+- Hooks: camelCase with `use` prefix (e.g., `useToast.ts`)
 - Utils: camelCase (e.g., `formatDate.ts`)
-- Routes: lowercase with hyphens (e.g., `user-profile/page.tsx`)
+- Routes: lowercase with hyphens (e.g., `generate/page.tsx`)
 
 ### Component Organization
 - Keep components small and focused
-- Extract reusable UI to `components/ui/`
-- Feature-specific components go in `components/features/`
+- Extract reusable UI to `components/ui/` (shadcn/ui)
+- Feature-specific components go in `components/features/recipe-generator/`
 - Use TypeScript interfaces for props
 
-### State Management
-- Server state: TanStack Query
-- Global client state: Zustand
-- Local component state: React useState
-- Form state: React Hook Form (when needed)
-
-## Limitations & When to Upgrade
-
-**Current Limitations:**
-- BaaS platform limits (check bkend.ai pricing)
-- Serverless function constraints
-- Limited backend logic customization
-
-**Upgrade to Enterprise Level if you need:**
-- Microservices architecture
-- Custom infrastructure control
-- High traffic scaling (100k+ concurrent users)
-- Complex backend business logic
-- Multi-region deployment
+### AI Prompt Engineering
+- Prompts are in `lib/api/gemini.ts` (createRecipePrompt function)
+- Always request JSON-only responses from Gemini
+- Include age-appropriate safety guidelines in prompts
+- Specify allergen warning requirements
+- Handle both ```json``` and raw JSON responses
 
 ## Troubleshooting
 
-### CORS Error
-- Register your domain in bkend.ai console
-- Check API key and project ID in `.env.local`
+### Gemini API Errors
+- Check `GEMINI_API_KEY` in `.env.local`
+- Verify API key has quota remaining (free tier limits apply)
+- Check Gemini AI Studio console for usage limits
 
-### 401 Unauthorized
-- Token expired, user needs to re-login
-- Implement token refresh logic if needed
+### JSON Parsing Errors
+- Gemini sometimes wraps response in ```json ... ```
+- Current code handles both formats (see lib/api/gemini.ts line 180-186)
 
-### Data Not Showing
-- Check collection name matches exactly
-- Verify query filters and conditions
-- Check browser console for API errors
+### Missing Images
+- Images come from Unsplash (no API key required)
+- Fallback to random baby food image if ingredient not found
+- Check ingredient mapping in lib/api/gemini.ts (line 96-117)
 
 ### TypeScript Errors
-- Sync types with actual data schemas
 - Run `npm run build` to check all type errors
+- Keep types/index.ts in sync with Gemini response format
 - Use proper type guards for nullable values
+
+## Future Enhancements (Not Yet Implemented)
+
+- User authentication and saved recipes
+- Recipe history and favorites
+- Social sharing features
+- Custom ingredient additions
+- Meal planning features
 
 ## Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
-- [bkend.ai Documentation](https://bkend.ai/docs)
-- [TanStack Query](https://tanstack.com/query/latest)
+- [Google Gemini AI](https://ai.google.dev/)
 - [Tailwind CSS](https://tailwindcss.com/docs)
+- [shadcn/ui](https://ui.shadcn.com/)
 - [bkit Development Guide](https://github.com/popup-studio-ai/bkit-claude-code)

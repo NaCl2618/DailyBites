@@ -56,9 +56,36 @@ export default function GeneratePage() {
     }
   };
 
-  const handleSave = () => {
-    // TODO: 실제 저장 로직 구현
-    alert('레시피가 저장되었습니다! (로그인 기능 구현 예정)');
+  const handleSave = async () => {
+    if (!generatedRecipe) return;
+
+    try {
+      const response = await fetch('/api/recipes/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipe: generatedRecipe,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (response.status === 401) {
+          alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(data.error || '레시피 저장에 실패했습니다');
+      }
+
+      alert('레시피가 저장되었습니다!');
+    } catch (err) {
+      console.error('Save error:', err);
+      alert(err instanceof Error ? err.message : '레시피 저장에 실패했습니다');
+    }
   };
 
   const handleRegenerate = async () => {

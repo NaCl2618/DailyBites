@@ -34,30 +34,72 @@ export const bkend = {
         token: 'mock-token',
       };
     },
+    getCurrentUser: async (token: string) => {
+      console.warn('Mock getCurrentUser - install @bkend/client for real implementation');
+      if (!token || token === 'invalid') {
+        return null;
+      }
+      return {
+        _id: 'mock-user-id',
+        email: 'user@example.com',
+        name: 'Mock User',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    },
     logout: () => {
       console.warn('Mock logout - install @bkend/client for real implementation');
     },
   },
-  collection: (name: string) => ({
-    find: async (filters?: any) => {
-      console.warn(`Mock collection.find(${name}) - install @bkend/client for real implementation`);
-      return [];
-    },
-    findById: async (id: string) => {
-      console.warn(`Mock collection.findById(${name}, ${id}) - install @bkend/client for real implementation`);
-      return null;
-    },
-    create: async (data: any) => {
-      console.warn(`Mock collection.create(${name}) - install @bkend/client for real implementation`);
-      return { _id: 'mock-id', ...data };
-    },
-    update: async (id: string, data: any) => {
-      console.warn(`Mock collection.update(${name}, ${id}) - install @bkend/client for real implementation`);
-      return { _id: id, ...data };
-    },
-    delete: async (id: string) => {
-      console.warn(`Mock collection.delete(${name}, ${id}) - install @bkend/client for real implementation`);
-      return { success: true };
-    },
-  }),
+  collection: (name: string) => {
+    const createChain = () => ({
+      sort: (sortOptions: any) => {
+        console.warn(`Mock collection.sort(${name}) - install @bkend/client for real implementation`);
+        return createChain();
+      },
+      skip: (n: number) => {
+        console.warn(`Mock collection.skip(${name}, ${n}) - install @bkend/client for real implementation`);
+        return createChain();
+      },
+      limit: async (n: number) => {
+        console.warn(`Mock collection.limit(${name}, ${n}) - install @bkend/client for real implementation`);
+        return [];
+      },
+    });
+
+    return {
+      find: (filters?: any) => {
+        console.warn(`Mock collection.find(${name}) - install @bkend/client for real implementation`);
+        return createChain();
+      },
+      findOne: async (filters?: any) => {
+        console.warn(`Mock collection.findOne(${name}) - install @bkend/client for real implementation`);
+        return null;
+      },
+      findById: async (id: string) => {
+        console.warn(`Mock collection.findById(${name}, ${id}) - install @bkend/client for real implementation`);
+        return null;
+      },
+      count: async (filters?: any) => {
+        console.warn(`Mock collection.count(${name}) - install @bkend/client for real implementation`);
+        return 0;
+      },
+      create: async (data: any) => {
+        console.warn(`Mock collection.create(${name}) - install @bkend/client for real implementation`);
+        return { _id: 'mock-id', ...data };
+      },
+      update: async (id: string, data: any) => {
+        console.warn(`Mock collection.update(${name}, ${id}) - install @bkend/client for real implementation`);
+        return { _id: id, ...data };
+      },
+      delete: async (id: string) => {
+        console.warn(`Mock collection.delete(${name}, ${id}) - install @bkend/client for real implementation`);
+        return { success: true };
+      },
+      deleteOne: async (filters?: any) => {
+        console.warn(`Mock collection.deleteOne(${name}) - install @bkend/client for real implementation`);
+        return { success: true };
+      },
+    };
+  },
 };
