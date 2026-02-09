@@ -13,13 +13,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RecipeCard } from '@/components/features/recipe-generator/RecipeCard';
 import { useDeleteRecipe } from '@/hooks/useRecipes';
 import Link from 'next/link';
-import { ChefHat, BookOpen, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChefHat, BookOpen, Plus, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const { data, isLoading } = useRecipes({ limit: 6 });
   const deleteRecipe = useDeleteRecipe();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
 
   const handleDelete = (recipeId: string) => {
     deleteRecipe.mutate(recipeId, {
@@ -55,6 +62,10 @@ export default function DashboardPage() {
               <Link href="/generate">
                 <Button variant="default">레시피 생성</Button>
               </Link>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="mr-1 h-4 w-4" />
+                로그아웃
+              </Button>
             </nav>
           </div>
         </div>

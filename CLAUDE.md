@@ -253,3 +253,9 @@ Documents are stored in `docs/` with proper versioning.
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [shadcn/ui](https://ui.shadcn.com/)
 - [bkit Development Guide](https://github.com/popup-studio-ai/bkit-claude-code)
+
+## 초기로드
+- 깃 상태 확인하고 원격 레포에서 푸시 받아 코드를 동기화 시킨다.
+
+## 끝날때
+- 사용자에게 '지금까지 수정한 내용을 커밋하고 푸시할까요?' 질문한 후 응답에 따라 행동한 후에 종료한다.

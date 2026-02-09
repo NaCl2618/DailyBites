@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { IngredientInput } from '@/components/features/recipe-generator/IngredientInput';
 import { RecipeOptions } from '@/components/features/recipe-generator/RecipeOptions';
 import { GenerationLoading } from '@/components/features/recipe-generator/GenerationLoading';
@@ -8,10 +9,19 @@ import { RecipeResult } from '@/components/features/recipe-generator/RecipeResul
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RecipeGenerationOptions, GeneratedRecipe } from '@/types';
-import { ChefHat, Sparkles } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { ChefHat, Sparkles, LayoutDashboard, LogOut } from 'lucide-react';
+import Link from 'next/link';
 type PageState = 'input' | 'loading' | 'result' | 'error';
 
 export default function GeneratePage() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
   const [pageState, setPageState] = useState<PageState>('input');
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [options, setOptions] = useState<RecipeGenerationOptions>({});
@@ -59,11 +69,30 @@ export default function GeneratePage() {
   const handleSave = async () => {
     if (!generatedRecipe) return;
 
+    // zustand store 또는 localStorage에서 토큰 가져오기
+    let token = user?.token;
+    if (!token) {
+      try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (authStorage) {
+          const parsed = JSON.parse(authStorage);
+          token = parsed.state?.user?.token || null;
+        }
+      } catch {}
+    }
+
+    if (!token) {
+      alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
+      router.push('/login');
+      return;
+    }
+
     try {
       const response = await fetch('/api/recipes/save', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           recipe: generatedRecipe,
@@ -73,15 +102,10 @@ export default function GeneratePage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        if (response.status === 401) {
-          alert('로그인이 필요합니다. 로그인 페이지로 이동합니다.');
-          window.location.href = '/login';
-          return;
-        }
         throw new Error(data.error || '레시피 저장에 실패했습니다');
       }
 
-      alert('레시피가 저장되었습니다!');
+      alert('레시피가 저장되었습니다! 대시보드에서 확인하세요.');
     } catch (err) {
       console.error('Save error:', err);
       alert(err instanceof Error ? err.message : '레시피 저장에 실패했습니다');
@@ -156,9 +180,30 @@ export default function GeneratePage() {
               <ChefHat className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold">DailyBites</h1>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/">홈으로</a>
-            </Button>
+            <div className="flex gap-2">
+              {user && (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="mr-1 h-4 w-4" />
+                      대시보드
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleLogout}>
+                    <LogOut className="mr-1 h-4 w-4" />
+                    로그아웃
+                  </Button>
+                </>
+              )}
+              {!user && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">로그인</Link>
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/">홈으로</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </header>

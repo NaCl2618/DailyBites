@@ -1,9 +1,20 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChefHat, Sparkles, Heart, Clock } from 'lucide-react';
+import { ChefHat, Sparkles, Heart, Clock, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50">
       {/* Hero Section */}
@@ -34,9 +45,18 @@ export default function Home() {
                 레시피 생성하기
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
-              <Link href="/login">로그인</Link>
-            </Button>
+            {mounted && user ? (
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="mr-2 h-5 w-5" />
+                  대시보드
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
+                <Link href="/login">로그인</Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>
@@ -141,7 +161,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t py-8 mt-16">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© 2026 DailyBites. All rights reserved.</p>
+          <p>&copy; 2026 DailyBites. All rights reserved.</p>
         </div>
       </footer>
     </div>

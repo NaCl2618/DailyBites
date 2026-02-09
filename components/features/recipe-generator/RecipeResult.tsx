@@ -13,10 +13,12 @@ import {
   ChefHat,
   Baby,
   AlertTriangle,
-  Download,
+  LayoutDashboard,
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RecipeResultProps {
   recipe: GeneratedRecipe;
@@ -33,6 +35,7 @@ export function RecipeResult({
   onNewRecipe,
   onShare,
 }: RecipeResultProps) {
+  const { user } = useAuth();
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleShare = () => {
@@ -72,6 +75,14 @@ export function RecipeResult({
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">생성 완료!</h1>
             <div className="flex gap-2">
+              {user && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/dashboard">
+                    <LayoutDashboard className="mr-1 h-4 w-4" />
+                    대시보드
+                  </Link>
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={onNewRecipe}>
                 새 레시피
               </Button>

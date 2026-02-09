@@ -17,6 +17,7 @@ interface User {
   id: string;
   email: string;
   name?: string;
+  token?: string;
 }
 
 interface AuthState {
@@ -40,7 +41,7 @@ export const useAuth = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const { user, token } = await bkend.auth.login({ email, password });
-          set({ user, isLoading: false });
+          set({ user: { ...user, token }, isLoading: false });
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Login failed',
@@ -54,7 +55,7 @@ export const useAuth = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const { user, token } = await bkend.auth.register({ email, password, name });
-          set({ user, isLoading: false });
+          set({ user: { ...user, token }, isLoading: false });
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Registration failed',
