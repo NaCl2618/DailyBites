@@ -93,7 +93,7 @@ export function IngredientInput({
                   <button
                     type="button"
                     onClick={() => addIngredient(ingredient.name)}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors"
+                    className="w-full px-4 py-2 text-left hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{ingredient.name}</span>

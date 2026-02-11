@@ -16,7 +16,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)]">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="text-center space-y-6 max-w-3xl mx-auto">

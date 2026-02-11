@@ -37,13 +37,13 @@ export default function MyRecipesPage() {
   const pagination = data?.data.pagination;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[hsl(30,30%,96%)]">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white/80 backdrop-blur-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <ChefHat className="h-6 w-6 text-primary-500" />
+              <ChefHat className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold">DailyBites</span>
             </Link>
 
@@ -67,7 +67,7 @@ export default function MyRecipesPage() {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">내 레시피</h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {pagination?.total || 0}개의 저장된 레시피
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function MyRecipesPage() {
         {/* Search */}
         <div className="mb-6">
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground/60 w-5 h-5" />
             <Input
               type="text"
               placeholder="레시피 검색..."
@@ -92,16 +92,16 @@ export default function MyRecipesPage() {
         {/* Recipes Grid */}
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">레시피를 불러오는 중...</p>
+            <p className="text-muted-foreground">레시피를 불러오는 중...</p>
           </div>
         ) : recipes.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <ChefHat className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <ChefHat className="w-16 h-16 mx-auto mb-4 text-muted-foreground/40" />
               <h3 className="text-xl font-semibold mb-2">
                 {search ? '검색 결과가 없습니다' : '아직 저장된 레시피가 없습니다'}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-muted-foreground mb-4">
                 {search
                   ? '다른 키워드로 검색해보세요'
                   : '첫 번째 레시피를 만들어보세요!'}
@@ -131,7 +131,7 @@ export default function MyRecipesPage() {
                   <ChevronLeft className="w-4 h-4" />
                   이전
                 </Button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {page} / {pagination.totalPages}
                 </span>
                 <Button

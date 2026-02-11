@@ -42,7 +42,7 @@ export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
 
       <CardContent className="p-4">
         <Link href={`/my-recipes/${recipe._id}`}>
-          <h3 className="font-semibold text-lg mb-2 hover:text-primary-500 transition-colors line-clamp-2">
+          <h3 className="font-semibold text-lg mb-2 hover:text-primary transition-colors line-clamp-2">
             {recipe.title}
           </h3>
         </Link>
@@ -63,20 +63,20 @@ export function RecipeCard({ recipe, onDelete }: RecipeCardProps) {
         </div>
 
         {recipe.userNote && (
-          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{recipe.userNote}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{recipe.userNote}</p>
         )}
 
         <div className="flex flex-wrap gap-1 mb-2">
           {recipe.ingredients.slice(0, 4).map((ingredient, idx) => (
             <span
               key={idx}
-              className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-700"
+              className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground"
             >
               {ingredient.name}
             </span>
           ))}
           {recipe.ingredients.length > 4 && (
-            <span className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-700">
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
               +{recipe.ingredients.length - 4}
             </span>
           )}

@@ -21,12 +21,32 @@ function generateId(): string {
 export const bkend = {
   auth: {
     login: async (credentials: { email: string; password: string }) => {
+      // 저장된 사용자 정보 조회 (Mock: localStorage에서 가져오기)
+      let name: string | undefined;
+      if (typeof window !== 'undefined') {
+        try {
+          const users = localStorage.getItem('mock-users');
+          if (users) {
+            const userList = JSON.parse(users);
+            const user = userList.find((u: any) => u.email === credentials.email);
+            name = user?.name;
+          }
+        } catch {}
+      }
       return {
-        user: { id: '1', email: credentials.email },
+        user: { id: '1', email: credentials.email, name },
         token: `token-${credentials.email}`,
       };
     },
     register: async (data: { email: string; password: string; name?: string }) => {
+      // Mock: 사용자 정보를 localStorage에 저장
+      if (typeof window !== 'undefined') {
+        try {
+          const users = JSON.parse(localStorage.getItem('mock-users') || '[]');
+          users.push({ email: data.email, name: data.name });
+          localStorage.setItem('mock-users', JSON.stringify(users));
+        } catch {}
+      }
       return {
         user: { id: '1', email: data.email, name: data.name },
         token: `token-${data.email}`,

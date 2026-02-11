@@ -60,7 +60,7 @@ export function GenerationLoading({ currentStep = 0 }: GenerationLoadingProps) {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-green-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)] p-4">
       <Card className="w-full max-w-md">
         <CardContent className="pt-6 space-y-6">
           {/* 로딩 애니메이션 */}
@@ -131,7 +131,7 @@ export function GenerationLoading({ currentStep = 0 }: GenerationLoadingProps) {
           </div>
 
           {/* 팁 */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-[hsl(15,50%,95%)] border-[hsl(15,40%,88%)]">
             <CardContent className="pt-4">
               <p className="text-sm text-center transition-opacity duration-500">
                 {TIPS[currentTip]}

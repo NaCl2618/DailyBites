@@ -133,11 +133,11 @@ export default function GeneratePage() {
   // 에러 상태
   if (pageState === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-green-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)] p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 space-y-4">
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-[hsl(0,50%,93%)] rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">❌</span>
               </div>
               <h2 className="text-2xl font-bold mb-2">생성 실패</h2>
@@ -171,7 +171,7 @@ export default function GeneratePage() {
   const canGenerate = selectedIngredients.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)]">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -265,11 +265,11 @@ export default function GeneratePage() {
           </div>
 
           {/* Info Box */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-[hsl(15,50%,95%)] border-[hsl(15,40%,88%)]">
             <CardContent className="pt-6">
               <div className="flex gap-3">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                     💡
                   </div>
                 </div>

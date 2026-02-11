@@ -39,18 +39,35 @@ export function RecipeResult({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleShare = () => {
+    // 레시피 내용을 텍스트로 변환
+    const recipeText = `
+${recipe.title}
+
+[재료]
+${recipe.ingredients.map((i) => `- ${i.name} ${i.amount}`).join('\n')}
+
+[조리 방법]
+${recipe.steps.map((step, idx) => `${idx + 1}. ${step}`).join('\n')}
+
+조리 시간: ${recipe.cookingTime}분
+난이도: ${difficultyLabels[recipe.difficulty]}
+권장 월령: ${recipe.ageRange}
+${recipe.allergyWarnings.length > 0 ? `\n알레르기 주의: ${recipe.allergyWarnings.join(', ')}` : ''}
+
+- DailyBites에서 생성된 레시피
+`.trim();
+
     if (navigator.share) {
       navigator
         .share({
           title: recipe.title,
-          text: `${recipe.title} - DailyBites에서 생성된 아기 간식 레시피`,
-          url: window.location.href,
+          text: recipeText,
         })
         .catch((err) => console.log('Share failed:', err));
     } else {
-      // Fallback: URL 복사
-      navigator.clipboard.writeText(window.location.href);
-      alert('URL이 복사되었습니다!');
+      // Fallback: 레시피 내용 복사
+      navigator.clipboard.writeText(recipeText);
+      alert('레시피가 클립보드에 복사되었습니다!');
     }
     onShare?.();
   };
@@ -62,13 +79,13 @@ export function RecipeResult({
   };
 
   const difficultyColors = {
-    easy: 'bg-green-100 text-green-800',
-    medium: 'bg-yellow-100 text-yellow-800',
-    hard: 'bg-red-100 text-red-800',
+    easy: 'bg-[hsl(170,30%,90%)] text-[hsl(170,35%,30%)]',
+    medium: 'bg-[hsl(40,50%,90%)] text-[hsl(40,40%,30%)]',
+    hard: 'bg-[hsl(0,40%,90%)] text-[hsl(0,40%,35%)]',
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)]">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
@@ -135,7 +152,7 @@ export function RecipeResult({
 
             {/* 알레르기 경고 */}
             {recipe.allergyWarnings.length > 0 && (
-              <Card className="bg-amber-50 border-amber-200">
+              <Card className="bg-[hsl(35,60%,95%)] border-[hsl(35,50%,85%)]">
                 <CardContent className="pt-4">
                   <div className="flex gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -276,7 +293,7 @@ export function RecipeResult({
           </div>
 
           {/* 안내 메시지 */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-[hsl(15,50%,95%)] border-[hsl(15,40%,88%)]">
             <CardContent className="pt-4">
               <p className="text-sm text-center text-muted-foreground">
                 💡 이 레시피는 AI가 생성한 것으로 참고용입니다. 아기의 개인적인 건강

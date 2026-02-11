@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 via-white to-green-50 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[hsl(15,70%,95%)] via-[hsl(30,40%,98%)] to-[hsl(280,30%,95%)] p-4">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 mb-8">
         <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
